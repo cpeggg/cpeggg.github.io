@@ -1,0 +1,114 @@
+# How2heap
+## first_fit
+核心思想就是当你之前free了chunk，那么当你再malloc一个大小比这个被free的chunk大小要小，那么gibc就会使用这个chunk的指针地址
+可能造成UAF
+##fastbin_dup 
+double-free attack
+主要讨论了double-free的原理：检测当前要被free的chunk是否已经是free list的第一个chunk（即是否是最近被free的那个），如果是，那么就报错
+那么我们可以先free掉chunk1，再free一个chunk2，此时我们就可以再次free chunk1了。此时的free list如下：
+chunk1-chunk2-chunk1
+最吃鲸的是此时再malloc3次得到3个指针p1,p2,p3，你会发现p1和p3会指向同一个地址
+##fastbin_dup_into_stack
+![](http://img.blog.csdn.net/20150331161131825?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvY2Fpc2hlbmZhbnM=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+![@这里的每一行在x86情况下表示4字节，在x64情况下表示8字节](http://img.blog.csdn.net/20150331161349062?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvY2Fpc2hlbmZhbnM=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
+注意这里的fd和bk指向的是chunk的开头而不是mem的开头
+
+被free掉的chunk内存分布如上图所示：指针指向的是free list中下一个chunk的地址
+那么借用上一节中的技术，我们可以让glibc的malloc返回一个指向任意地址的指针
+首先，通过上一节的方法，我们可以得到一个malloc出的指针，它和一个在freelist中的chunk指向的地址是同一处。
+结合本节的这两张图片，我们可以发现：通过修改malloc出的这个chunk中的数据，可以修改到实际上free chunk中的“下一个chunk in the free list”和“上一个chunk in the free list“。那么覆写掉“free list中的下一个chunk”的地址，实际上就可以通过malloc两次来让glibc malloc分配出指向这个地址的chunk指针了。
+同时要注意指向的地址处需要先修改出一个适合于chunk大小的数值以绕过glibc malloc的检查(x86情况下是ptr+4，x64情况下是ptr+8)，但是这里的大小检查，非常的水（详见malloc.c源码），而且也不要求页对齐了
+## unsafe_unlink
+*表示unlink一直不是很熟练，更何况现在是真正面对glibc的unlink，还是要多加熟悉*
+本节的示范要求： 有一个已知地址的chunk指针，同时其指向的chunk要能够进行unlink操作，那么就可以实现任意地址写了
+假设这个指针为p，指向的chunk为chunk0，下面具体陈述如何绕过各种检查：
+环境：ubuntu 14.04/16.04/17.04 ==x64==
+###  (P->fd->bk != P || P->bk->fd != P) == False
+那么首先需要在这个chunk中构建出一个新的，假的chunk出来，设这个chunk为fakechunk，我们让fakechunk的起始地址为chunk0的数据开始地址，那么如果fakechunk能够被free，那么其fd和bk的地址应该在fakechunk数据地址处，也就是fakechunk地址+0x10处，也就是chunk0的数据地址+0x10处
+修改fakechunk的fd和bk分别为p的地址减去8*3bytes和p的地址减去8*2bytes
+### (chunksize(P) != prev_size (next_chunk(P)) == False
+此时我们需要保证fakechunk的size等于其下一个chunk的previous_size（也就是fd->prev_size）
+next_chunk(P) == (mchunkptr) (((char *) (p)) + chunksize (p)) == chunk0 + (chunk0[1]&(~ 0x7))
+也就是说，如果有x=chunk0_ptr[1] & (~ 0x7)， 那么就会有x = *(chunk0_ptr + x)
+也就是我们只需要将x设为*(chunk0_ptr + x)就可以了
+因此执行下列步骤：
+1. 由于chunk0数据地址+0x8处（即fakechunk的size）为0，那么计算得到的fakechunk的下一个chunk的地址实际上就是chunk0的数据地址，这里不需要我们做任何修改
+2. 再设置fakechunk的下一个chunk的pre_size为fakechunk的size，也就是将*（chunk0数据地址+保存在这个地址中的pre_size）设为fakechunk的size
+因此我们是需要将chunk0指向的数据地址值改为0x8就可以了
+3. 实际上也可以修改fakechunk的size让它不是0，那么只要再根据1.2.剩余步骤将对应的内存中的值修改为同样大小的size也能绕过检查
+**注意这里也可以实现向后合并，参考b1gtang**
+### heap overflow
+当chunk0能够发生堆溢出时，我们可以对chunk0的下一个chunk（设为chunk1）的header进行修改。我们将chunk1的prev_size进行修改，就能让chunk0发生一定的缩水，从而让glibc认为被处理的chunk是fakechunk
+- 如：chunk0的size为0x90（0x80data+0x10header），也就是chunk1的prev_size=0x90，那么如果将其覆写为0x80，就可以让glibc malloc对fakechunk进行处理了
+
+同时，再对chunk1的prev_in_use标记为0，则glibc malloc就会认为fakechunk是在free状态的了
+现在，free掉chunk1，glibc malloc会将其与fakechunk进行合并,覆盖掉原来的chunk0的指针
+
+此时，chunk0指向的地址为chunk0-0x10，如果对chunk0[3]作修改，实际上就会对chunk0指针中保存的地址做修改，再调用chunk0指针进行读写时，就能修改到其他地方的值了
+## house_of_spirit
+主要利用的是fast bin的单链表性质
+假如我们想改写一小段内存，但是现在只能控制到这一段内存的前后两段内存，那么我们就可以通过将这段内存伪装成一个fast chunk分配出来的空间，先将它free再malloc一次，就可以得到指向这一段空间的指针了。
+那么要如何伪装呢？利用fast chunk较少的检查特性可以更方便的绕过检查
+记指向这一片暂时不可写区域的指针为p
+- 修改*(p-8)处的值为一个正常fast chunk的size（如0x40，注意这个size是包括了header的chunk总大小）
+- 此时glibc malloc就会将p+0x30（在上述修改为0x40情况下）处当作这个chunk的下一个chunk，它只会检查下一个chunk的size是否为正常值（也就是在2*SIZE_SZ (16bytes on x64)到av->system_mem (128kb by default for the main arena)之间即可）
+- 因此此时只要将p+0x38处的值修改为一个正常大小的值即可(如0x1234之类)
+这个时候我们free(p)， chunk进入fastbin， 再malloc一个大小小于等于之前的size-0x10(如0x30)的chunk就可以修改p指向的空间了
+## poison_null_byte
+主要利用的思想就是在读入字符串的过程当中，会向字符串的末尾加一个'\x00'，这在某些时候（尤其在堆中）可能产生较为严重的后果，如下面的例子：
+在新版本的free中添加了'chunksize(P) != prev_size (next_chunk(P))'的检查，那么要如何绕过这个检查呢？
+假设现在malloc了3个大小分别为0x100（由于内存对齐，实际分配出的数据空间大小可能有出入）,0x200和0x100的chunk a,b,c
+如果在向a中读入字符串时读满了整个a的可用空间(也包括了b的pre_data部分)，那么就会覆盖到b的size部分中的最后一个字节了，也就是说，b的size从原来的0x210变成了0x200
+此时，glibc 会认为c的地址在b的地址+0x200处而不是原来的0x210处了
+回到开始说的满足条件'chunksize(P) != prev_size (next_chunk(P))'，我们发现，可以很方便的先在b这个chunk中对b数据段的第0x1f0处的值修改为0x200，就可以在free掉b的时候满足这个条件了
+而更加有趣的是，free掉b之后再重新malloc一个同类大小（不妨设为0x100）的chunk，记这个新malloc出的chunk指针为b1。
+- 讲道理，此时的c的prev_size应该被更新为b1的size，但是没有，反而是c.prev_size的前面0x10处的值被修改为了b1的size（0x100）
+- 如果此时再malloc一个0x80大小的b2呢？此时b2会紧跟在b1的后边，一切看上去ok
+	- 但是如果此时将b1和c都free掉，会发现一个严重的问题：glibc将b1和c合并了
+	- 也就是说，如果我此时再malloc一个大小在b1和c之和量级的一个chunk d，那么d将会覆盖b2的内存区域，对d的部分内存读写会造成对b2的完全内存读写了
+##house_of_lore
+核心思想仍然是构造出假的chunk，这里是在栈上构造
+栈上需要构造两个chunk：stackchunk1和stackchunk2，再加上程序本身malloc（0x100）的chunk ‘victim’
+- 首先是对stackchunk1的设置：将chunkstack1的prev_size和size均设为0，ptr_forward指向victim。这里是为了之后能成功把victim从small bin中malloc出来做准备
+- 再设置stackchunk1的ptr_backward指向stackchunk2，stackchunk2的ptr_backward指向stackchunk1即可。这里是为了能够通过glibc的检查，为最后一个malloc到栈上做准备
+- 接下来将vimtim释放掉，作为一个smallchunk，一开始victim会进入到unsorted bin当中（注意可能的smallchunk与topchunk的合并，可能需要先malloc一个其他的chunk隔开）
+	- 非fastbin第一次free都会放到unsorted bin当中
+- 再malloc一个small与unsorted bin均不能解决的大小的一个chunk（如malloc（1000））此时unsorted bin的代码会将vimtim 插入到small chunk的开头
+	- 即此时的small bin结构大致如下：
+small bin <-----> victim   双向链表
+- 接下来假设我们能够通过某些方法修改到此时的victim->bk为我们想要覆写的数据地址
+	- 即此时的small bin结构大致如下：
+small bin.fd = small bin.bk = victim
+victim.fd = small bin
+victim.bk = stackchunk2
+- 那么此时先malloc一个size小于等于victim的chunk p1，很容易知道此时victim指向的区域会被交给p1
+- 那如果再malloc一个small chunk呢？我们会发现，target指针被返回了，也就是我们成功malloc到了stackchunk2位置上（通常可以是栈地址，然后就可以修改rip这样的值了）
+## overlapping_chunks
+这个感觉让人有些意想不到的容易，如果有某个chunk被free到了unsorted bin当中，那么如果可以再修改这个unsorted chunk的size为一个更大的值（同时注意3个flag的一致），那么在重新malloc出来时就可以malloc一个更大的chunk，这样就可以覆盖到原本在其之后malloc的堆空间
+如：
+现在连续malloc 3个small chunk：p1, p2 & p3，现在将p2 free掉， p2先进入到unsorted chunk当中，这个时候如果还可以修改到*（p2-8），即p2的size为一个更大的值sizem，那么如果此时再进行一个刚好为sizem的malloc，这个chunk p2就会直接从unsorted bin当中返还给user，大小为sizem
+也就是说，此时再对p2进行写操作，就可以改写到p3的任意内容了
+## overlapping_chunks_2
+这一节让我了解到了GoSSIP的一个秘密、一个大佬233333
+参见 https://loccs.sjtu.edu.cn/wiki/lib/exe/fetch.php?media=gossip:overview:ptmalloc_camera.pdf 中谢天忆对glibc2.23 malloc的3个经典利用
+这一节即是其中所述的Nonadjacent Free Chunk Consolidation Attack
+首先构造5个large chunk A,B,C,D,E
+首先free(D) ，E避免D与top chunk合并
+然后A堆溢出修改B的size处的8个字节为B和C两个chunk的size之和sizelarge
+然后再free（B），glibc malloc会误将其和D合并
+这时再malloc(sizelarge)，就会返回与B相同的指针P，不同的是此时的P指向的堆空间可以对C做完全的修改了
+## house_of_force
+这个是对top chunk的利用：
+首先malloc一个chunk，这个chunk应该是由top chunk紧跟在后面的
+那么如果可以通过堆溢出修改到top chunk的size（如max unsigned long long即-1），那么我们就可malloc任意大小的chunk而不至于让glibc去调用mmap了，也就是说，我们可以malloc一个大小任意（足够大，甚至大到计算出为负数）的chunk，就让下一个malloc能够改写到任意地址的内容了
+## unsorted_bin_attack
+思想就是首先要控制一个在unsorted bin中的chunk p的bk指针，将其修改为目的内存地址-0x10处，再malloc一个大小和这个chunk p相同的chunk q出来，那么在unsorted bin code对chunk p 进行处理时，就会将p->bk处的值修改为unsorted bin(av)的值了
+## unsorted_bin_attack(advanced)
+参见hitcon2017: damocles
+## house_of_einherjar
+利用了chunk前八个字节在前一个chunk未被free的情况下可以被前一个写的特性以及一个'\x00'的off-by-one来完成这个攻击
+假设malloc两个chunk a和b，首先一个off-by-one改掉b的flag中的PREV_IN_USE位，再重写a的后8个字节（即b的prev_size）为目标地址-0x10到b的偏移
+再在目标地址处创建一个假的chunk，细节如下：
+size和prev_size相等且均为small chunk大小，fd、bk，fd_size和bk_size均设为指向自己
+然后free（b），glibc就会将b一直到目标地址-0x10的所有空间合并成一个chunk扔进unsorted bin当中
+这时再按自己需求malloc small或large chunk，就可以在目标地址处开始写内容了
