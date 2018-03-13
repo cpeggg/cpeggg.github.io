@@ -1,3 +1,12 @@
+---
+title: How2heap
+description: an illustration of How2heap by shellphish
+categories:
+ - tutorial
+tags:
+ - pwn
+---
+
 # How2heap
 ## first_fit
 核心思想就是当你之前free了chunk，那么当你再malloc一个大小比这个被free的chunk大小要小，那么gibc就会使用这个chunk的指针地址
