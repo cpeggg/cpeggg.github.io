@@ -8,6 +8,6 @@ then
 fi
 git add --all
 
-git commit -m COMMITMENT
+git commit -m $COMMITMENT
 
 git push -u origin master
