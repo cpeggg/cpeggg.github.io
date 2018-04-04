@@ -1,5 +1,5 @@
 ---
-title: 操作系统内存管理方式
+title: Memory management in OS
 description: a basic description of memory management in OS
 categories:
  - tutorial

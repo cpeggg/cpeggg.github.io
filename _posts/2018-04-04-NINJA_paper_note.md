@@ -1,5 +1,5 @@
 ---
-title: Ninja: Towards Transparent Tracing and Debugging on ARM论文笔记
+title: Ninja: Towards Transparent Tracing and Debugging on ARM paper note
 description: paper note
 categories:
  - iot
