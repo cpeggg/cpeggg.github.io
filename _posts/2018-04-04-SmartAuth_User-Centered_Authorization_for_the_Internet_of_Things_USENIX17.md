@@ -1,5 +1,5 @@
 ---
-title: SmartAuth: User-Centered Authorization for the Internet of Things USENIX'17
+title: SmartAuth: User-Centered Authorization for the Internet of Things USENIX17
 description: paper note
 categories:
  - iot
