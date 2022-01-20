@@ -1,5 +1,5 @@
 (function() {
-  window.imagesLoad = function(images) {
+  window.imagesLoad = function(/assets/images/mdimages/images) {
     images = images || document.getElementsByTagName('img');
     var imagesCount = images.length, loadedCount = 0, image;
     var i, j, loaded = false, cbs = [];
