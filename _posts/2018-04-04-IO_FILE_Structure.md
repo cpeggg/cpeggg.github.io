@@ -4,6 +4,11 @@ description: a basic description of file structure in glibc
 tags:
  - pwn
 ---
+<!-- write excerpt here -->
+_IO_FILE结构
+
+<!--more-->
+
 #_IO_FILE structure
 应该知道的是，该structure是[heap]段中malloc出的一个chunk，而且该structure中指向文件内容的指针所指向的地址也在[heap]段中，为0x1000(0x1010)大小的chunk
 文件读写常用的可打开的特殊文件：（ongoing）

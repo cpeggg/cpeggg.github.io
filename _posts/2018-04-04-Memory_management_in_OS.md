@@ -4,7 +4,12 @@ description: a basic description of memory management in OS
 tags:
  - OS
 ---
-# 操作系统内存管理方式
+
+<!-- write excerpt here -->
+操作系统内存管理方式
+
+<!--more-->
+
 ## Chap.1
 如何将计算机上有限的物理内存分配给多个程序使用
 

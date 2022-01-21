@@ -5,6 +5,9 @@ tags:
  - pwn
 ---
 
+Glibc Malloc方式速查
+<!--more-->
+
 > For fast review
 
 翻译自 https://sploitfun.wordpress.com/2015/02/10/understanding-glibc-malloc/

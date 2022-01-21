@@ -3,8 +3,10 @@ title: Encryption Algorithm
 description: 
 tags:
  - crypto
+ - ongoing
 ---
-# Encryption Algorithm
+分组加密模式总结
+<!--more-->
 ## 分组加密算法中的加密模式
 ### ECB模式
 ![](http://images.cnblogs.com/cnblogs_com/happyhippy/1ECB.jpg)
@@ -47,3 +49,4 @@ e1和e2是一对相关的值，e1可以任意取，但要求e1与(p-1)*(q-1)互�
 RSA加解密的算法完全相同，设A为明文，B为密文，则：A=B^e2 mod n；B=A^e1 mod n；（公钥加密体制中，一般用公钥加密，私钥解密）
 e1和e2可以互换使用，即：
 A=B^e1 mod n；B=A^e2 mod n;
+### 待补充：GCM等

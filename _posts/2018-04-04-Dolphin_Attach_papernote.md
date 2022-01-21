@@ -1,9 +1,13 @@
 ---
-title: "DolphinAtack: Inaudible Voice Commands paper note"
+title: "DolphinAtack: Inaudible Voice Commands"
 description: 
 tags:
- - paper
+ - paperreading
 ---
+
+DolphinAtack: Inaudible Voice Commands论文笔记
+
+<!--more-->
 
 #DolphinAtack: Inaudible Voice Commands
 作者们：

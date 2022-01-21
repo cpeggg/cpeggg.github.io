@@ -13,7 +13,7 @@
       if($images && $images.length > 0) {
         for (i = 0; i < $images.length; i++) {
           image = $images.eq(i);
-          if (image.get(0).naturalWidth > 800) {
+          if (/assets/images/mdimages/image.get(0).naturalWidth > 800) {
             items.push({ src: image.attr('src'), w: image.get(0).naturalWidth, h: image.get(0).naturalHeight, $el: image});
           }
         }

@@ -3,10 +3,15 @@ title: Pwnable.kr writeup
 description: an record of pwn learning
 tags:
  - pwn
+ - ongoing
 ---
 
-# Pwnable.kr
-@[pwn, ongoing]
+<!-- write excerpt here -->
+
+pwnable.kr题目记录
+
+<!--more-->
+
  
 [TOC]
 ## Rookiss

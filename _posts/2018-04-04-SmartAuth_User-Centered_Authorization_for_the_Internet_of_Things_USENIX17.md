@@ -1,9 +1,16 @@
 ---
-title: "SmartAuth: User-Centered Authorization for the Internet of Things USENIX17"
+title: "SmartAuth: User-Centered Authorization for the Internet of Things"
 description: paper note
 tags:
- - paper
+ - paperreading
 ---
+
+<!-- write excerpt here -->
+
+SmartAuth: User-Centered Authorization for the Internet of Things(USENIX'17) 论文笔记
+
+<!--more-->
+
 #SmartAuth: User-Centered Authorization for the Internet of Things(USENIX'17)
 原文链接：https://www.usenix.org/system/files/conference/usenixsecurity17/sec17-tian.pdf
 作者：

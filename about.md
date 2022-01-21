@@ -28,4 +28,9 @@ key: page-about
 
 Hi!
 
-This is Quanpu Cai(蔡洤朴). You can find my Chinese job-intended resume [here](assets/pdfs/蔡洤朴.pdf)
+This is Quanpu Cai(蔡洤朴). 
+
+Basically, I received my B.S. and M.S. degrees in Computer Security from Shanghai Jiao Tong University, Shanghai, China. I am going to Alibaba Cloud Security to conduct security application development for virtualized cloud instances and related work for data privacy and protection.
+
+<!-- You can find my Chinese job-intended resume [here](/assets/pdfs/蔡洤朴.pdf) -->
+

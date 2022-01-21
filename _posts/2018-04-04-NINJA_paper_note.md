@@ -1,10 +1,14 @@
 ---
-title: "Ninja: Towards Transparent Tracing and Debugging on ARM paper note"
-description: paper note
+title: "Ninja: Towards Transparent Tracing and Debugging on ARM"
 tags:
- - paper
+ - paperreading
 ---
-# Ninja: Towards Transparent Tracing and Debugging on ARM论文笔记
+
+<!-- write excerpt here -->
+
+Ninja: Towards Transparent Tracing and Debugging on ARM论文笔记
+
+<!--more-->
 
 [TOC]
 ## background

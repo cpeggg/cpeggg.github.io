@@ -4,6 +4,10 @@ description: a technique to create shellcode in ascii chars
 tags:
  - pwn
 ---
+<!-- write excerpt here -->
+ASCII Shellcode生成
+
+<!--more-->
 
 # How to create an ASCII shellcode ?
 
