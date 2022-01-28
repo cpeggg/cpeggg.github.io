@@ -8,7 +8,7 @@ tags: ruby
 ---
 
 <!-- write excerpt here -->
-重新搭blog时的一些问题总结
+搭blog时的一些问题总结
 
 <!--more-->
 
