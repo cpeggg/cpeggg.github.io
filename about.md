@@ -34,4 +34,4 @@ Basically, I received my B.S. and M.S. degrees in Computer Security from Shangha
 
 <!-- You can find my Chinese job-intended resume [here](/assets/pdfs/蔡洤朴.pdf) -->
 
-My publication are listed below  <img src="/assets/images/logo/glScholar.svg" width = "20" height = "20" /> 
+My publications are listed below  <img src="/assets/images/logo/glScholar.svg" width = "20" height = "20" /> 
