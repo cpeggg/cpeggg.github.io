@@ -14,9 +14,11 @@ tags: rust
 
 ## 学习资源
 
-https://github.com/rust-lang/book 官方教程
+<https://github.com/rust-lang/book> 官方教程
 
-https://docs.microsoft.com/zh-cn/learn/paths/rust-first-steps/ 微软出的教程
+<https://docs.microsoft.com/zh-cn/learn/paths/rust-first-steps/> 微软出的教程
+
+<https://doc.rust-lang.org/nightly/std/all.html> 常用api的文档查询
 
 《深入浅出Rust》还不错，适合在有知识背景下在地铁上翻翻快速阅读
 
@@ -69,7 +71,7 @@ https://docs.microsoft.com/zh-cn/learn/paths/rust-first-steps/ 微软出的教�
    - `overflowing_*`：返回值和一个是否发生溢出行为的bool
    - `saturating_*`：返回变量返回的最大/最小值
 
-3. char类型占4bytes（unicode），使用u8来单字节表示，char使用单引号的形式赋常量值，u8则使用对应的数字（声明u8类型，使用类似`8u8`的赋值，或使用`b''`的形式表示）
+3. char类型占4bytes（unicode），使用u8来单字节表示，char使用单引号的形式赋常量值，u8则使用对应的数字（声明u8类型，使用类似`8u8`的赋值，或使用`b''`的形式表示）。需要区分的是，在`str`或者是`String`中，由于使用UTF8进行编码，因此中间字符的实际占用大小可能为1-4个字节不等。
 4. tuple/struct/tuple struct的区别：
    - tuple对成员不命名，本身也没有名字，使用.0 .1 .2 这样来访问成员（和array有区别，array中仍然用[0] [1] [2]这样去访问）
    - struct对成员命名，本身有名字（类似c/c++中的struct定义，相当于定义了一个类型），使用对应命名来访问成员
@@ -283,3 +285,108 @@ https://docs.microsoft.com/zh-cn/learn/paths/rust-first-steps/ 微软出的教�
 10. `use`中的`*`则是指：将对应module下的所有public对象导入
 11. 为了将不同的module能够分散到不同的文件当中去，需要按2.中的树形建立对应的文件夹以及相应的`module.rs`文件，在上层文件中还需要单独写一行`mod xxx_module;`来告诉编译器在另一个同名的`.rs`文件中去加载module的内容
 
+### 一些常用数据类型（类比c++中的stl）
+
+1. 使用`&`来引用访问vector中的元素会产生(im)mutable borrow
+2. 使用`.get`方法来产生`Option<T>`结果，可以对超出边界的情况进行处理
+3. vector内的元素类型需保持一致，但可以用enum中的类型append来进行扩展
+   ```rust
+   enum SpreadsheetCell {
+      Int(i32),
+      Float(f64),
+      Text(String),
+   }
+
+   let row = vec![
+      SpreadsheetCell::Int(3),
+      SpreadsheetCell::Text(String::from("blue")),
+      SpreadsheetCell::Float(10.12),
+   ];
+   ```
+4. String类支持push_str()方法和push()方法，分别接受`str`类型和`char`类型的输入
+5. 在Rust的`String/str`类型中，由于单个字符使用unicode表示，类似`"你好"[0]`的indexing操作可能有如下两种歧义：
+   1. 取第一个字符`'你'`
+   2. 取该字符串对应的bytes中的第一个字节
+   因此为了避免歧义，Rust禁止了这种index方式，使用`.chars().nth()` or `.bytes().nth()`来进行indexing。
+
+   另一个Rust要禁止这种indexing方式的原因是，通常indexing的复杂度期望是`O(1)`，而实际上Rust需要消耗额外的时间复杂度来从字符串开头到指定index位置之间的内容中有多少的有效字符。
+6. 但和访问单个字符/字节的需求不同，`str`和`String`支持使用切片(slicing)的方式来进行数据访问，此时切片的上下标表示的是字符串对应的字节序列中的对应位置，如：
+   ```rust
+   let hello = "Здравствуйте";
+   let s = &hello[0..4];
+   ```
+   会得到`"Зд"`的结果，因为这两个字符刚好占4个字节数，而如果是
+   ```rust
+   let s = &hello[0..1];
+   ```
+   则会产生运行错误（而非编译错误），因为此时下标1还在字符'3'的字节范围内：
+   ```
+   panicked at 'byte index 1 is not a char boundary; it is inside 'З' (bytes 0..2) of `Здравствуйте`'
+   ```
+7. Rust中通过两个vector来创建hashmap的方法：
+   ```rust
+   use std::collections::HashMap;
+   let teams = vec![String::from("Blue"), String::from("Yellow")];
+   let initial_scores = vec![10, 50];
+
+   let mut scores: HashMap<_, _> = teams.into_iter().zip(initial_scores.into_iter()).collect();
+   ```
+8. 需要注意的是，当使用String等有深浅拷贝之分的类型变量对hashmap进行赋值时，其执行的是浅拷贝操作，也因此，用来赋值的变量在赋值给hashmap之后不能再被使用，如以下的使用场景：
+   ```rust
+   let mut scores = HashMap::new();
+   scores.insert(String::from("Blue"), 10);
+   scores.insert(String::from("Yellow"), 50);
+
+   let team_name = String::from("Blue");
+   let score = scores.get(&team_name);
+   ```
+   中可以看到，如果需要访问某个键的值时，需要再重新let赋值一个变量来进行访问。
+9. 使用hashmap中的`entry()`方法来访问某个键的值，搭配`or_insert()`方法来对未赋值的keyvalue进行赋值，`or_insert()`方法返回`&mut V`，因此对于如下的代码。有：
+   ```rust
+   let text = "hello world wonderful world";
+   let mut map = HashMap::new();
+   for word in text.split_whitespace() {
+      let count = map.entry(word).or_insert(0);
+      *count += 1;
+   }
+   println!("{:?}", map);
+   ```
+   最终结果为`{"hello": 1, "world": 2, "wonderful": 1}`，因为count为keyvalue的可变引用，同时可以看到，对于类型为`&mut`的变量，使用`*`来修改指向的变量值时，该引用本身不需要为`mut`
+
+### 错误处理
+
+1. 当`panic!`宏被触发时，程序会打印错误信息，回溯并清理程序栈帧，然后退出程序。如果需要注重程序大小，减少unwind操作而将对应的处理交给os来清理和释放的话，可以在`Cargo.toml`文件中添加：
+   ```
+   [profile.release]
+   panic = 'abort'
+   ```
+   来显式告诉编译器编译`panic!`时的处理方式
+2. `panic!`返回的是`never type`，通俗而言，返回这种类型的函数一般表示该函数*不会返回*，因此其可以用在`match语句`中和其他的正常返回值进行并列。比如如下的代码
+   ```rust
+   let f = File::open("test.txt");
+   let f = match f{
+      Ok(file) => file,
+      Err(err) => panic!("Failed to open test.txt with {}", err),
+   };
+   ```
+   中，`panic!`因为返回never type，其可以和正常返回的`struct File`的Ok情况并列，这里的`panic!`如果换成`println!`则会编译失败。
+
+   类似的还有`return语句`，如：
+   ```rust
+   fn read_username_from_file() -> Result<String, io::Error> { // 这里应该是表示可以返回实例化类型为String或io:Error的Result类型
+      let f = File::open("hello.txt");
+      let mut f = match f {
+         Ok(file) => file,
+         Err(e) => return Err(e), // 可以和struct File并列
+      };
+      let mut s = String::new();
+      match f.read_to_string(&mut s) {
+         Ok(_) => Ok(s),
+         Err(e) => Err(e),
+      }
+   }
+   ```
+   关于`never`原语的更多信息可参见[官方文档](https://doc.rust-lang.org/nightly/std/primitive.never.html)
+3. 使用`use std::io::ErrorKind`来对错误类型进行单独判断和进一步处理，如`ErrorKind::NotFound`
+4. `unwrap`和`expect`可以快捷处理执行中遇到的错误，`expect`可以自定义panic时输出的信息
+5. 使用`?`来更进一步替代`unwrap`的功能，`?`本身的返回值可以接着用，接着`?`。与`unwrap`不同的是，`?`要求调用其的caller本身需要有`Result<T,E>`、`Option<T>`等类型的返回值才可以编译通过。
