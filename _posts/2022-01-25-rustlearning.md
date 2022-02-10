@@ -390,3 +390,67 @@ tags: rust
 3. 使用`use std::io::ErrorKind`来对错误类型进行单独判断和进一步处理，如`ErrorKind::NotFound`
 4. `unwrap`和`expect`可以快捷处理执行中遇到的错误，`expect`可以自定义panic时输出的信息
 5. 使用`?`来更进一步替代`unwrap`的功能，`?`本身的返回值可以接着用，接着`?`。与`unwrap`不同的是，`?`要求调用其的caller本身需要有`Result<T,E>`、`Option<T>`等类型的返回值才可以编译通过。
+
+### 模版、通用数据类型、特征和生命周期
+
+1. 和C++中类似，Rust中也支持根据不同数据类型来执行相同操作的模版函数定义，如下列代码：
+   ```rust
+   fn largest<T>(list: &[T]) -> T {
+      let mut largest = list[0];
+      for &item in list {
+         if item > largest {
+               largest = item;
+         }
+      }
+      largest
+   }
+   fn main() {
+      let number_list = vec![34, 50, 25, 100, 65];
+      let result = largest(&number_list);
+      println!("The largest number is {}", result);
+      let char_list = vec!['y', 'm', 'a', 'q'];
+      let result = largest(&char_list);
+      println!("The largest char is {}", result);
+   }
+   ```
+   这里的`fn largest<T>(list: &[T]) -> T`表示函数`largest`在类型`T`上定义为模版函数，这个函数有一个类型为`&[T]`的参数`list`，返回类型为`T`的值。但编译时会报错，因为Rust认为不是所有的类型T都满足`if item > largest`中的大小比较操作，因此应将largest的定义为：
+   ```rust
+   fn largest<T: std::cmp::PartialOrd>(list: &[T]) -> T 
+   ```
+   但Rust还会接着报错，因为`largest = list[0];`的操作需要类型T满足可以深拷贝（或无深浅拷贝）的情况下才可以进行
+2. 在有了模版的概念之后，可以引出`Option`和`Result`的定义，如下：
+   ```rust
+   enum Option<T> {
+      Some(T),
+      None,
+   }
+   enum Result<T, E> {
+      Ok(T),
+      Err(E),
+   }
+   ```
+3. Rust的编译器中包含一个名为`borrow checker`的检测系统，该系统通过检查每个变量的生命周期，来检查所有引用的合法性。
+
+#### Lifetime Annotation Syntax
+
+为了进一步明确引用的生命周期，**生命周期标注（Lifetime Annotation Syntax）**被提出，首先看如下的代码：
+```rust
+fn longest(x: &str, y: &str) -> &str {
+   if x.len() > y.len() {
+      x
+   } else {
+      y
+   }
+}
+```
+以上的函数在编译时，由于Rust判断该函数的返回值为一个引用值，但根据函数签名，Rust无法判断这个引用值究竟是来自x还是y的引用，因此我们需要使用特定的语法对返回值的生命周期进行声明：
+```rust
+fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        x
+    } else {
+        y
+    }
+}
+```
+可以看到，通过在声明变量类型中加入特定的命名标记，编译器现在知道了传入的x, y参数有相同的生命周期，且返回值的生命周期和x, y保持一致
