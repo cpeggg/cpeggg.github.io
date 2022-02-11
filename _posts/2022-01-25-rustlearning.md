@@ -20,6 +20,8 @@ tags: rust
 
 <https://doc.rust-lang.org/nightly/std/all.html> 常用api的文档查询
 
+<https://skyao.io/learning-rust/std.html>有自己的学习笔记、std库和core库的笔记
+
 《深入浅出Rust》还不错，适合在有知识背景下在地铁上翻翻快速阅读
 
 ## 一些笔记
@@ -58,7 +60,7 @@ tags: rust
       // way 2
       let number:u32 = match number.trim().parse(){
          Ok(num) => num,
-         Err(_) => println("Failed to parse"),  
+         Err(_) => println!("Failed to parse"),  
       };
    ```
 2. 整数溢出问题：
@@ -80,6 +82,7 @@ tags: rust
 5. 数组的index为usize类型
 6. rust支持通过类似`(1..6)`这样的方式构建`std::ops::Range<Integer>`类型，但这和通过`[1, 2, 3, 4, 5]`构建出来的`[{integer}; 5]`类型有区别
 7. 通过`String::from/new`这样构造出来的变量类型为`alloc::string::String`；通过`="xxx"`这样构造出来的为`&str`，也可以使用`=b"xxxx"`来构造`&[u8]`类型的变量
+8. Rust支持使用`as`关键字来进行有限的类型转换
 
 #### 函数、代码块
 
@@ -157,7 +160,27 @@ tags: rust
 #### Structs
 
 1. struct声明的时候不需要分号结尾
-2. 可以类似python的命名传参的方式，特定改变传参顺序，如：
+2. struct初始化的时候，特定的成员参数必须使用显式指定/同名指定的方式来命名，不可顺序默认赋值，如：
+   ```rust
+   struct Config{
+      query: String,
+      filename: String,
+   }
+   fn main(){
+      let config1 = Config{
+         query: String::from("config1query"),
+         filename: String::from("config1filename"),
+      };
+      let query = String::from("config2query");
+      let filename = String::from("config2filename");
+      let config2 = Config{query, filename};
+      // 下面的方法不可以，必须显式指定
+      let x = String::from("config3query");
+      let y = String::from("config3filename");
+      let config3 = Config{x, y};
+   }
+   ```
+3. 可以类似python的命名传参的方式，特定改变传参顺序，如：
    ```rust
    struct User{
       active: bool,
@@ -192,7 +215,8 @@ tags: rust
    }
    ```
 5. impl来为struct定义方法，传入参数需要为`&self`，impl实现的方法可以与成员变量同名，上述实现的方法称为`Associated Functions`，impl中可以定义多个相关函数，也可以在不同的impl但针对同一struct的代码块中分别定义
-6. 不使用`&self`作为传入参数的`Associated Functions`不能称为struct的方法，因此不能用`.`来访问和调用，只能通过`::`来访问和调用，如：
+6. 当传入的参数为`&mut self`而非`&self`时，定义的函数称为类的静态成员函数（`&self`则对应为类的成员函数）
+7. 不使用`&self`作为传入参数的`Associated Functions`不能称为struct的方法，因此不能用`.`来访问和调用，只能通过`::`来访问和调用，如：
    ```rust
    impl Rectangle {
       fn square(size: u32) -> Rectangle {
@@ -205,6 +229,7 @@ tags: rust
    // -- snip --
    let rect = Rectangle::square(5);
    ```
+   还有常见的构造函数`::new()`也是属于Associated Functions，*Associated Functions可能采用静态生成的方式，非Associated的采用动态函数表的调用方式*
 
 #### 枚举类型
 
@@ -251,7 +276,7 @@ tags: rust
 
 1. 使用`cargo new --lib`来创建代码库的repo
 2. crate是当前代码库的默认最大module，module通过`mod`来进行树形定义
-3. 通过在需要向module外暴露使用的数据、函数前添加`pub`关键字来make public
+3. 通过在需要向module外暴露使用的数据、函数前添加`pub`关键字来make public，private函数可以被子mod使用
 4. 通过`use`关键字来使用module或者定义在module下的数据、函数：
    ```rust
    mod front_of_house {
@@ -267,10 +292,9 @@ tags: rust
    }
    ```
 5. 通过`self`和`super`进行2.中树上的相对路径module访问
-6. rust支持和python中类似的`as`关键字
-7. `use`同样支持被再次`pub`来再暴露给其他module使用
-8. 对于外部的crates，通过在`Cargo.toml`声明后cargo会在编译前期自动下载相关依赖
-9. `use`支持同路径下的合并：
+6. `use`同样支持被再次`pub`来再暴露给其他module使用
+7. 对于外部的crates，通过在`Cargo.toml`声明后cargo会在编译前期自动下载相关依赖
+8. `use`支持同路径下的合并：
    ```rust
    use std::cmp::Ordering;
    use std::io;
@@ -282,8 +306,8 @@ tags: rust
    // equals to
    use std::io::{self, Write};
    ```
-10. `use`中的`*`则是指：将对应module下的所有public对象导入
-11. 为了将不同的module能够分散到不同的文件当中去，需要按2.中的树形建立对应的文件夹以及相应的`module.rs`文件，在上层文件中还需要单独写一行`mod xxx_module;`来告诉编译器在另一个同名的`.rs`文件中去加载module的内容
+9.  `use`中的`*`则是指：将对应module下的所有public对象导入
+10. 为了将不同的module能够分散到不同的文件当中去，需要按2.中的树形建立对应的文件夹以及相应的`module.rs`文件，在上层文件中还需要单独写一行`mod xxx_module;`来告诉编译器在另一个同名的`.rs`文件中去加载module的内容
 
 ### 一些常用数据类型（类比c++中的stl）
 
@@ -431,6 +455,36 @@ tags: rust
    ```
 3. Rust的编译器中包含一个名为`borrow checker`的检测系统，该系统通过检查每个变量的生命周期，来检查所有引用的合法性。
 
+#### Traits
+1. traits的目的主要告诉编译器，一种类型拥有并能够和其他的数据类型共享数据，这种共享的过程可以通过traits来进行抽象化定义。和Java中的Interface有些类似。Rust中trait是非常重要的概念，它承担了类似C++中通过纯虚类表达接口的意图。Rust中强调组合优先继承的思想，不支持struct级的继承，但支持trait的接口继承，这和Java等编程语言一样。
+2. traits支持重载。
+3. traits本身也可以作为变量类型放在函数定义当中，这样做的时候说明该函数接受所有impl了该traits的类型的参数
+4. 对于有多个参数需要使用traits通用定义变量类型时，可以使用如下的简写形式：
+   ```rust
+   pub fn notify(item1: &impl Summary, item2: &impl Summary) {
+   ```
+   ```rust
+   pub fn notify<T: Summary>(item1: &T, item2: &T) {
+   ```
+   类似的，如果还是不同的traits：
+   ```rust
+   pub fn notify(item: &(impl Summary + Display)) {
+   ```
+   ```rust
+   pub fn notify<T: Summary + Display>(item: &T) {
+   ```
+   甚至更复杂地，通过`where`关键字，有：
+   ```rust
+   fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 {
+   ```
+   ```rust
+   fn some_function<T, U>(t: &T, u: &U) -> i32
+      where T: Display + Clone,
+            U: Clone + Debug
+   {
+   ```
+5. 类似的，返回值也可以为traits所限定的返回类型
+
 #### Lifetime Annotation Syntax
 
 为了进一步明确引用的生命周期，**生命周期标注（Lifetime Annotation Syntax）**被提出，首先看如下的代码：
@@ -446,11 +500,243 @@ fn longest(x: &str, y: &str) -> &str {
 以上的函数在编译时，由于Rust判断该函数的返回值为一个引用值，但根据函数签名，Rust无法判断这个引用值究竟是来自x还是y的引用，因此我们需要使用特定的语法对返回值的生命周期进行声明：
 ```rust
 fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
-    if x.len() > y.len() {
-        x
-    } else {
-        y
-    }
+   if x.len() > y.len() {
+      x
+   } else {
+      y
+   }
 }
 ```
-可以看到，通过在声明变量类型中加入特定的命名标记，编译器现在知道了传入的x, y参数有相同的生命周期，且返回值的生命周期和x, y保持一致
+可以看到，通过在声明变量类型中加入特定的命名标记（以`'`开头，且名称通常很短，位置在`&`和类型之间），编译器现在知道了传入的x, y参数有相同的生命周期，且返回值的生命周期和x, y保持一致。
+
+那么接下来，将这个函数进行实际应用：
+```rust
+fn main() {
+   let string1 = String::from("long string is long");
+   let result;
+   {
+      let string2 = String::from("xyz");
+      result = longest(string1.as_str(), string2.as_str());
+   }
+   println!("The longest string is {}", result);
+}
+```
+可以看到编译仍然是不通过的，回想对longest的定义，longest的返回值应该和传入参数有相同的lifetime，而这里的string2的生命周期结束后，其返回值result仍然在被使用，因此编译器发现了生命周期的不一致并抛出了编译错误，因此将代码修改成如下形式后即可编译通过：
+```rust
+fn main() {
+   let string1 = String::from("long string is long");
+   let result; // 这里不需要mut，因为此时并未初始化具体的值
+   let string2 = String::from("xyz");
+   {
+      result = longest(string1.as_str(), string2.as_str());
+   }
+   println!("The longest string is {}", result);
+}
+```
+使用类似如下的形式来声明不同生命周期模版：
+```rust
+fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &str 
+```
+当去掉`'`时，就回到了之前的模版类型定义，可以将二者混合起来，如：
+```rust
+use std::fmt::Display;
+fn longest_with_an_announcement<'a, T>(
+   x: &'a str,
+   y: &'a str,
+   ann: T,
+) -> &'a str
+where
+   T: Display,
+{
+   println!("Announcement! {}", ann);
+   if x.len() > y.len() {
+      x
+   } else {
+      y
+   }
+}
+```
+
+需要提到的一种特殊生命周期声明是`'static`声明，该声明表示对应的变量的生命周期伴随整个程序，比如常量字符串，常量字符串的定义通常默认为
+```rust
+let s: & 'static str = "Hello world!";
+```
+这样的形式，该字符串实际上是直接写到了静态数据段上。
+
+> 在使用`'static`进行声明时，需要注意该数据是否真正需要保持整个程序运行过程中都可以存活。尤其是当你准备创建dangling reference或不匹配的lifetimes时，虽然Rust编译器可能会提示你通过添加`'static`来解决这一问题，但你实际上应该是解决实际的程序逻辑错误而非直接简单粗暴添加`'static`来解决。
+
+### 自动化测试
+这一部分之前接触的语言中没有怎么了解过。Rust的自动化测试通过`cargo test`来完成，其会采取和build不同的方式来编译src文件，主要区别在于，其仅会拿需要测试的代码来进行编译（来节省时间），同时其在生成过程中*应该*也和正常build不同，会添加cfg记录的一些额外代码。
+
+被用来测试的入口函数本身不能带任何参数
+
+1. 自动化测试针对`cargo new xxx --lib`的项目进行自动化测试，对于需要测试的函数，需要在其前面添加`#[test]`来标注，再通过`cargo test [--release]`来进行对特定函数的测试
+2. 使用`assert!(cond)`、`assert!(cond, format, ...)`、`assert_eq!(state1, state2)`等语句来在关键位置进行判断
+3. 需要注意的是，在`src/lib.rs`中写代码时，如果将`struct`、`impl`等定义写在了`mod`的外面，在`mod`内使用时需要先添加一行`use super::*`才可以使用
+4. 通过在`#[test]`后加一行`#[should_panic]`来指定模块需要panic产生的测试，后加`#[ignore]`来声明暂时不测试
+5. cargo test可以并发进行，形式如`cargo test --release -- --test-threads=8`，类型的参数还有`--show-output`：打印输出、`--ignored`：专门测试标注为`#[ignore]`的函数
+6. `cargo test func_name`可以针对某个函数进行测试，或者是针对包括`func_name`的所有函数进行测试
+
+### 函数闭包、生成器
+1. 闭包概念类似python中的lambda，Rust支持对闭包的参数、返回值类型的自动推断
+2. 对于可迭代的数据类型（如vector），通过调用其`.iter()`方法可以得到类似python中的generator
+3. iterator可以再调用`.map()`来依次对每个元素进行计算，使用`.collect()`对计算的结果进行收集
+   ```rust
+   let v1: Vec<i32> = vec![1, 2, 3];
+   let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
+   assert_eq!(v2, vec![2, 3, 4]);
+   ```
+4. 使用`.filter()`来对生成器结果进行筛选：
+   ```rust
+   shoes.into_iter().filter(|s| s.size == shoe_size).collect()
+   ```
+5. 生成器还包括如下的一些方法：
+   ```rust
+   fn using_other_iterator_trait_methods() {
+      let sum: u32 = Counter::new()
+         .zip(Counter::new().skip(1))
+         .map(|(a, b)| a * b)
+         .filter(|x| x % 3 == 0)
+         .sum();
+      assert_eq!(18, sum);
+   }
+   ```
+
+### 关于Cargo和crates.io
+1. 调整优化等级
+   ```
+   [profile.dev]
+   opt-level = 0
+
+   [profile.release]
+   opt-level = 3
+   ```
+2. 通过在成员前使用`\\\`来写针对其的文档，可以使用markdown语法，将生成HTML格式的文档并使用`cargo doc`来生成，添加`--open`参数来查看文档，类似的还有`\\!`
+3. *关于如何将项目发布到crates.io暂时没看*
+
+### 智能指针
+1. 在Rust中，引用实际上也是一种指针，但除了引用数据之外没有其他功能；智能指针是一种除了能像指针一样引用数据之外，还能有其他元数据和功能的一种数据结构的统称。和引用只是“借用”数据不同，智能指针实际上拥有其指向数据的所有权。
+2. 实际上`String`、`Vec<T>`这些也是智能指针的一种，因为他们拥有一部分内存空间并允许你通过他们来控制这些内存空间上的数据，同时他们还有一些其他的数据（如长度、encoding格式等）来保证其数据特性。
+3. 智能指针大部分情况下使用`struct`来实现，但和普通struct不同的是，智能指针必须单独实现`Deref`和`Drop`两种方法：
+   - Deref：一种模版方法，允许该智能指针结构体能够通过引用或智能指针本身来实现像引用一样的数据访问功能。对于没有定义该方法的智能指针，不能使用`*`来访问其数据，对于定义了该方法的智能指针，`*p`实际等价于`*(p.deref())`，如下面的代码：
+   ```rust
+   use std::ops::Deref;
+   // 为智能指针MyBox定义Deref方法
+   impl<T> Deref for MyBox<T> {
+      type Target = T;
+
+      fn deref(&self) -> &T {
+         &self.0
+      }
+   }
+   // 定义智能指针MyBox
+   struct MyBox<T>(T);
+   impl<T> MyBox<T> {
+      fn new(x: T) -> MyBox<T> {
+         MyBox(x)
+      }
+   }
+   fn hello(name: &str) {
+      println!("Hello, {}!", name);
+   }
+   fn main() {
+      let m = MyBox::new(String::from("Rust"));
+      hello(&m);
+   }
+   ```
+   上面的代码是可以正常编译并运行的，m在这里是一个`MyBox<String>`类型，调用`hello(&m)`时，首先将变成`hello(&(m.deref()))`，m.deref将`MyBox<String>`变成`String`类型。同时，`String`本身也是一个智能指针，因此其deref方法提供了将String类型数据转变为内含的字符串切片类型数据的能力，因此`&String`类型最终得以转为`&str`成为符合`fn hello`调用的参数类型。
+   - Drop：一种模版方法，当对应的智能指针变量不再使用时调用（相当于析构），Drop方法不能显式调用。可以通过std库中的Drop方法来提前清理释放inscope的变量内存。定义Drop方法类似Deref
+4. 许多库会使用其自定义的智能指针，在这里主要介绍标准库中最常见的三种智能指针：
+   - `Box<T>`：用来在堆上分配数据，实际上最终是用仅包含一个元素的`tuple struct`来实现的
+   - `Rc<T>`：一种通过引用计数来实现同一个数据有多个拥有着的智能指针，如创建链表时，指向下一个节点的指针需要为`Rc`而非`Box`
+   - `Ref<T>`以及`RefMut<T>`：需要通过`RefCell<T>`来访问，一种在运行时而非编译时应用借用策略的智能指针
+5. `interior mutability`：一种immutable类型，但通过其的一些API可以修改其内部的一些值
+6. 使用`Box::new(value)`来为特定的值分配堆上空间
+7. 使用`Rc::new(value)`来为特定的值分配计数智能指针，通过`Rc::clone(&rccounter)`来创建新指针并增加访问计数，通过`Rc::strong_count(&rccounter)`来获取访问计数的数字
+8. 关于`deref`的mut继承问题，Rust进行了如下限定：
+   - From `&T` to `&U` when `T: Deref<Target=U>`
+   - From `&mut T` to `&mut U` when `T: DerefMut<Target=U>`
+   - From `&mut T` to `&U` when `T: Deref<Target=U>`
+   which means未定义defrefmut方法时，得到的数据都是immutable的
+9. *有关`Ref`/`RefMut`的内容暂时没看*，相当于是把借用策略交给编程者来管理
+10. *有关Reference Cycle的内容暂时没看*，大致是说当使用`Rc<T>`等智能指针当形成循环依赖时，可能造成的内存破坏问题
+
+### 并发控制
+1. 并发分为两类：*Concurrent programming*指程序的各部分独立运行；*parallel programming*则是指程序的各部分能同时运行。有关这两者的问题通常统称为并发(Concurrency)问题。
+2. 随着Rust的发展，开发人员发现其设计中的*ownership*和*type systems*是安全管理内存和并发控制的关键所在，这一特性也被称为Rust的*fearless concurrency*
+3. 使用`thread::spawn(func)`来创建线程，调用返回值的`.join().unwrap()`方法来等待子线程完成任务
+4. 如果子线程需要使用主线程中的变量，由于Rust无法知道新生成的线程会运行多久，因此其无法判断其借用的值是否会一直有效（比如变量可能会drop掉，或者因为在主线程中out of scope而回收掉，等等原因），从而导致编译检查失败。为了解决这个问题，在`spawn(func)`前添加move关键字（`spawn(move func)`）来告诉Rust：对于在func中使用到的所有变量，子线程获得其所有权（也就是主线程、其他子线程都不再拥有其所有权）
+5. 更通用的线程间通信手段是使用channel来完成，一种常用的channel为*mpsc(multiple producer single customer)*，一种FIFO队列通信原语
+   1. mpsc不随sender的结束而关闭。子线程中被发送的数据将被转移所有权（即在子线程之后的代码中不能再被使用）
+   2. 对recv()得到的数据类型通过send处的数据传入类型自动推断，async channel的buffer size无限大
+   3. 如果只发送一个数据，接收端可以调用`recv()`方法来获取数据；如果通过多次调用`send()`发送了多个数据，可以将rx当作iterator来遍历channel中接收到的所有数据（而非去调用`rx.recv()`来获取
+   4. 当有多个producer时，不能使用同一个`tx`，应调用`tx.clone()`后传给其他的producer
+6. 另一种常用的多线程通信的方式是使用共享内存，虽然在Go的设计哲学中有*“do not communicate by sharing memory.”*，但借助*ownership*和*type systems*的帮助，在Rust中还是提供了互斥锁（mutex，mutual exclusion）来对其进行管理，并且能帮助多个线程对共享内存进行正确地操作
+   1. 由于Mutex常需要在多个线程中使用，而`Mutex<T>`本身并没有实现Copy方法，导致不能通过move关键字或clone等方式来解决所有权的问题。一种想法是使用上一节中提到的`Rc<T>`来包裹使用，但由于move关键字中包含的Send()方法不能针对`Rc<T>`类型使用，因此这种方案行不通。基于这样的想法，可以使用原子操作的Rc，即`Arc<T>`类型来完成此问题
+   2. **Similarities Between `RefCell<T>/Rc<T>` and `Mutex<T>/Arc<T>`** ：与`Rc<T>`循环引用可能造成内存泄漏相比，`Mutex<T>`在实际运行时可能会造成死锁，可尝试通过标准库中的`MutexGuard`、以及一些各个语言中通用的解决手段来解决死锁问题。
+7. 实际上，Rust语言中并没有特别多的并发特性，上述的绝大多数都是来自于标准库的实现（而非语言自身特性）。然而，Rust真正的并发特性来自于`std::marker`中的`Sync`和`Send`特性：
+   - Send特性：允许不同线程之间对数据所有权的交接。几乎所有的类型都支持Send特性，但之前所述的`Rc<T>`（因为不同线程对计数器的修改如果不是原子操作，则可能会引入问题），以及裸指针，等类型不行。
+   - Sync特性：允许来自不同线程对数据的访问操作。换句话说：
+      > any type `T` is `Sync` if `&T` (an immutable reference to `T`) is `Send`
+
+### 面向对象编程
+1. Rust本身的一些特性其实不是面向对象的设计，但通过Rust这门语言可以完成面向对象的功能。
+2. Rust和一些面向对象编程的性质间的关系如下：
+   1. 可以通过pub/无pub来实现public/private控制，完成封装，即将实现细节不暴露给使用者
+   2. Rust从设计上而言，并不是一个强调通过继承来实现代码复用的语言。但出于使用继承的目的，Rust有对应的解决方式：
+      1. 如果是出于对父类的代码复用（即继承）的目的，那么可以通过Rust的traits机制来实现类似的效果，如：
+         ```rust
+         // 通过traits定义类似Java中的interface接口
+         pub trait Summary {
+            fn summarize_author(&self) -> String;
+            fn summarize(&self) -> String {
+               format!("(Read more from {}...)", self.summarize_author())
+            }
+         }
+         pub struct Tweet {
+            pub username: String,
+            pub content: String,
+            pub reply: bool,
+            pub retweet: bool,
+         }
+         impl Summary for Tweet {
+            fn summarize_author(&self) -> String {
+               format!("@{}", self.username)
+            }
+         }
+         ```
+         上述代码中，任意impl了Summary的类型就都有了默认的`summarize_author`和`summarize`方法。而且被impl的类型还可以重载此方法。
+      2. 如果是出于多态的目的，Rust其实也可以用`dyn traits`来实现。对普遍多态的反对意见主要包括：
+         1. 子类随着多态往往可能包含太多定义在基类，但子类完全不需要用到的方法
+         2. 上述的基类方法应用在子类时可能会造成问题
+3. *`dyn traits`部分暂时没看，<https://zhuanlan.zhihu.com/p/109990547>中也有相关介绍*
+
+### 其他一些高级用法
+
+#### unsafe
+为了解决Rust静态分析的保守性所带来的扩展能力受限特点，unsafe关键字用来提供部分用来通过编译检查的更灵活特性。
+
+通过在特定的操作前后使用`unsafe{}`进行包裹来说明unsafe部分。同时，可以直接用unsafe来修饰fn、impl，但调用fn、impl的代码仍需要用unsafe包裹
+
+unsafe提供的superpower包括：
+1. 对raw pointer的解引用
+2. 调用unsafe function/method
+3. 读写mutable的静态变量
+4. 使用unsafe的类型模版
+5. 读写union成员
+
+which means unsafe并不会关掉包括引用检查在内的一些其他检查
+
+#### Advanced traits, types, functions, closures和macros
+
+### 其他一些有意思的地方
+1. Rust在接受命令行参数的时候，通常使用`std::env::args`来处理，但如果此时给出的命令行参数中包含非法的unicode字符，使用`::args`会造成程序panic，更稳妥的方式是使用`::args_os`来进行处理，但这也通常可能导致在不同OS上出现不同表示的情况，处理起来也更麻烦
+2. rustbook中的*An I/O Project: Building a Command Line Program*一章非常不错（以及*Iteratos and Closure*章节最后对代码的优化）！建议前面的内容都差不多熟悉后跟着这一章一起做
+3. 关于Iterator和循环那种运行效率更高，Rust官方做的测试是Iterator略快于循环。但官方关于二者的效率差异，有如下的解释：
+   > The point is this: iterators, although a high-level abstraction, get compiled down to roughly the same code as if you’d written the lower-level code yourself. Iterators are one of Rust’s zero-cost abstractions, by which we mean using the abstraction imposes no additional runtime overhead. 
+   
+   关于zero-cost abstraction，有：
+
+   > This is analogous to how Bjarne Stroustrup, the original designer and implementor of C++, defines zero-overhead in “Foundations of C++” (2012): In general, C++ implementations obey the zero-overhead principle: What you don’t use, you don’t pay for. And further: What you do use, you couldn’t hand code any better.
+4. Rust使用libloading动态加载动态链接库：<https://docs.rs/libloading/latest/libloading/>，并使用`extern "C"`来使用C的方式来调用外部函数，调用的代码通常需要使用`unsafe`来包裹
+5. 链表的创建：参见`use crate::List::{Cons, Nil};`的相关内容
