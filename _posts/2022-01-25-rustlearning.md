@@ -251,7 +251,7 @@ tags: rust
 
 1. 使用`cargo new --lib`来创建代码库的repo
 2. crate是当前代码库的默认最大module，module通过`mod`来进行树形定义
-3. 通过在需要向module外暴露使用的数据、函数前添加`pub`关键字来make public
+3. 通过在需要向module外暴露使用的数据、函数前添加`pub`关键字来make public，private函数可以被子mod使用
 4. 通过`use`关键字来使用module或者定义在module下的数据、函数：
    ```rust
    mod front_of_house {
@@ -446,11 +446,75 @@ fn longest(x: &str, y: &str) -> &str {
 以上的函数在编译时，由于Rust判断该函数的返回值为一个引用值，但根据函数签名，Rust无法判断这个引用值究竟是来自x还是y的引用，因此我们需要使用特定的语法对返回值的生命周期进行声明：
 ```rust
 fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
-    if x.len() > y.len() {
-        x
-    } else {
-        y
-    }
+   if x.len() > y.len() {
+      x
+   } else {
+      y
+   }
 }
 ```
-可以看到，通过在声明变量类型中加入特定的命名标记，编译器现在知道了传入的x, y参数有相同的生命周期，且返回值的生命周期和x, y保持一致
+可以看到，通过在声明变量类型中加入特定的命名标记（以`'`开头，且名称通常很短，位置在`&`和类型之间），编译器现在知道了传入的x, y参数有相同的生命周期，且返回值的生命周期和x, y保持一致。
+
+那么接下来，将这个函数进行实际应用：
+```rust
+fn main() {
+   let string1 = String::from("long string is long");
+   let result;
+   {
+      let string2 = String::from("xyz");
+      result = longest(string1.as_str(), string2.as_str());
+   }
+   println!("The longest string is {}", result);
+}
+```
+可以看到编译仍然是不通过的，回想对longest的定义，longest的返回值应该和传入参数有相同的lifetime，而这里的string2的生命周期结束后，其返回值result仍然在被使用，因此编译器发现了生命周期的不一致并抛出了编译错误，因此将代码修改成如下形式后即可编译通过：
+```rust
+fn main() {
+   let string1 = String::from("long string is long");
+   let result; // 这里不需要mut，因为此时并未初始化具体的值
+   let string2 = String::from("xyz");
+   {
+      result = longest(string1.as_str(), string2.as_str());
+   }
+   println!("The longest string is {}", result);
+}
+```
+使用类似如下的形式来声明不同生命周期模版：
+```rust
+fn longest<'a, 'b>(x: &'a str, y: &'b str) -> &str 
+```
+当去掉`'`时，就回到了之前的模版类型定义，可以将二者混合起来，如：
+```rust
+use std::fmt::Display;
+fn longest_with_an_announcement<'a, T>(
+   x: &'a str,
+   y: &'a str,
+   ann: T,
+) -> &'a str
+where
+   T: Display,
+{
+   println!("Announcement! {}", ann);
+   if x.len() > y.len() {
+      x
+   } else {
+      y
+   }
+}
+```
+
+### 自动化测试
+这一部分之前接触的语言中没有怎么了解过。Rust的自动化测试通过`cargo test`来完成，其会采取和build不同的方式来编译src文件，主要区别在于，其仅会拿需要测试的代码来进行编译（来节省时间），同时其在生成过程中*应该*也和正常build不同，会添加cfg记录的一些额外代码。
+
+被用来测试的入口函数本身不能带任何参数
+
+1. 自动化测试针对`cargo new xxx --lib`的项目进行自动化测试，对于需要测试的函数，需要在其前面添加`#[test]`来标注，再通过`cargo test [--release]`来进行对特定函数的测试
+2. 使用`assert!(cond)`、`assert!(cond, format, ...)`、`assert_eq!(state1, state2)`等语句来在关键位置进行判断
+3. 需要注意的是，在`src/lib.rs`中写代码时，如果将`struct`、`impl`等定义写在了`mod`的外面，在`mod`内使用时需要先添加一行`use super::*`才可以使用
+4. 通过在`#[test]`后加一行`#[should_panic]`来指定模块需要panic产生的测试，后加`#[ignore]`来声明暂时不测试
+5. cargo test可以并发进行，形式如`cargo test --release -- --test-threads=8`，类型的参数还有`--show-output`：打印输出、`--ignored`：专门测试标注为`#[ignore]`的函数
+6. `cargo test func_name`可以针对某个函数进行测试，或者是针对包括`func_name`的所有函数进行测试
+
+### 函数闭包、生成器
+1. 闭包概念类似python中的lambda，Rust支持对闭包的参数、返回值类型的自动推断
+2. 
