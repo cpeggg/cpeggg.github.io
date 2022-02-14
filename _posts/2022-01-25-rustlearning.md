@@ -58,7 +58,7 @@ tags: rust
       // way 2
       let number:u32 = match number.trim().parse(){
          Ok(num) => num,
-         Err(_) => println("Failed to parse"),  
+         Err(_) => println!("Failed to parse"),  
       };
    ```
 2. 整数溢出问题：
@@ -157,7 +157,27 @@ tags: rust
 #### Structs
 
 1. struct声明的时候不需要分号结尾
-2. 可以类似python的命名传参的方式，特定改变传参顺序，如：
+2. struct初始化的时候，特定的成员参数必须使用显式指定/同名指定的方式来命名，不可顺序默认赋值，如：
+   ```rust
+   struct Config{
+      query: String,
+      filename: String,
+   }
+   fn main(){
+      let config1 = Config{
+         query: String::from("config1query"),
+         filename: String::from("config1filename"),
+      };
+      let query = String::from("config2query");
+      let filename = String::from("config2filename");
+      let config2 = Config{query, filename};
+      // 下面的方法不可以，必须显式指定
+      let x = String::from("config3query");
+      let y = String::from("config3filename");
+      let config3 = Config{x, y};
+   }
+   ```
+3. 可以类似python的命名传参的方式，特定改变传参顺序，如：
    ```rust
    struct User{
       active: bool,
@@ -205,6 +225,7 @@ tags: rust
    // -- snip --
    let rect = Rectangle::square(5);
    ```
+   还有常见的构造函数`::new()`也是属于Associated Functions，*Associated Functions可能采用静态生成的方式，非Associated的采用动态函数表的调用方式*
 
 #### 枚举类型
 
@@ -503,6 +524,14 @@ where
 }
 ```
 
+需要提到的一种特殊生命周期声明是`'static`声明，该声明表示对应的变量的生命周期伴随整个程序，比如常量字符串，常量字符串的定义通常默认为
+```rust
+let s: & 'static str = "Hello world!";
+```
+这样的形式，该字符串实际上是直接写到了静态数据段上。
+
+> 在使用`'static`进行声明时，需要注意该数据是否真正需要保持整个程序运行过程中都可以存活。尤其是当你准备创建dangling reference或不匹配的lifetimes时，虽然Rust编译器可能会提示你通过添加`'static`来解决这一问题，但你实际上应该是解决实际的程序逻辑错误而非直接简单粗暴添加`'static`来解决。
+
 ### 自动化测试
 这一部分之前接触的语言中没有怎么了解过。Rust的自动化测试通过`cargo test`来完成，其会采取和build不同的方式来编译src文件，主要区别在于，其仅会拿需要测试的代码来进行编译（来节省时间），同时其在生成过程中*应该*也和正常build不同，会添加cfg记录的一些额外代码。
 
@@ -517,4 +546,71 @@ where
 
 ### 函数闭包、生成器
 1. 闭包概念类似python中的lambda，Rust支持对闭包的参数、返回值类型的自动推断
-2. 
+2. 对于可迭代的数据类型（如vector），通过调用其`.iter()`方法可以得到类似python中的generator
+3. iterator可以再调用`.map()`来依次对每个元素进行计算，使用`.collect()`对计算的结果进行收集
+   ```rust
+   let v1: Vec<i32> = vec![1, 2, 3];
+   let v2: Vec<_> = v1.iter().map(|x| x + 1).collect();
+   assert_eq!(v2, vec![2, 3, 4]);
+   ```
+4. 使用`.filter()`来对生成器结果进行筛选：
+   ```rust
+   shoes.into_iter().filter(|s| s.size == shoe_size).collect()
+   ```
+5. 生成器还包括如下的一些方法：
+   ```rust
+   fn using_other_iterator_trait_methods() {
+      let sum: u32 = Counter::new()
+         .zip(Counter::new().skip(1))
+         .map(|(a, b)| a * b)
+         .filter(|x| x % 3 == 0)
+         .sum();
+      assert_eq!(18, sum);
+   }
+   ```
+
+### 关于Cargo和crates.io
+1. 调整优化等级
+   ```
+   [profile.dev]
+   opt-level = 0
+
+   [profile.release]
+   opt-level = 3
+   ```
+2. 通过在成员前使用`\\\`来写针对其的文档，可以使用markdown语法，将生成HTML格式的文档并使用`cargo doc`来生成，添加`--open`参数来查看文档，类似的还有`\\!`
+3. 关于如何将项目发布到crates.io暂时没看
+
+### 智能指针
+
+### 并发控制
+
+### 其他一些高级用法
+
+#### unsafe
+为了解决Rust静态分析的保守性所带来的扩展能力受限特点，unsafe关键字用来提供部分用来通过编译检查的更灵活特性。
+
+通过在特定的操作前后使用`unsafe{}`进行包裹来说明unsafe部分。同时，可以直接用unsafe来修饰fn、impl，但调用fn、impl的代码仍需要用unsafe包裹
+
+unsafe提供的superpower包括：
+1. 对raw pointer的解引用
+2. 调用unsafe function/method
+3. 读写mutable的静态变量
+4. 使用unsafe的类型模版
+5. 读写union成员
+
+which means unsafe并不会关掉包括引用检查在内的一些其他检查
+
+#### traits, types, functions, closures和macros
+
+
+### 其他一些有意思的地方
+1. Rust在接受命令行参数的时候，通常使用`std::env::args`来处理，但如果此时给出的命令行参数中包含非法的unicode字符，使用`::args`会造成程序panic，更稳妥的方式是使用`::args_os`来进行处理，但这也通常可能导致在不同OS上出现不同表示的情况，处理起来也更麻烦
+2. rustbook中的*An I/O Project: Building a Command Line Program*一章非常不错（以及*Iteratos and Closure*章节最后对代码的优化）！建议前面的内容都差不多熟悉后跟着这一章一起做
+3. 关于Iterator和循环那种运行效率更高，Rust官方做的测试是Iterator略快于循环。但官方关于二者的效率差异，有如下的解释：
+   > The point is this: iterators, although a high-level abstraction, get compiled down to roughly the same code as if you’d written the lower-level code yourself. Iterators are one of Rust’s zero-cost abstractions, by which we mean using the abstraction imposes no additional runtime overhead. 
+   
+   关于zero-cost abstraction，有：
+
+   > This is analogous to how Bjarne Stroustrup, the original designer and implementor of C++, defines zero-overhead in “Foundations of C++” (2012): In general, C++ implementations obey the zero-overhead principle: What you don’t use, you don’t pay for. And further: What you do use, you couldn’t hand code any better.
+4. Rust使用libloading动态加载动态链接库：<https://docs.rs/libloading/latest/libloading/>，并使用`extern "C"`来使用C的方式来调用外部函数，调用的代码通常需要使用`unsafe`来包裹
