@@ -20,6 +20,8 @@ tags: rust
 
 <https://doc.rust-lang.org/nightly/std/all.html> 常用api的文档查询
 
+<https://skyao.io/learning-rust/std.html>有自己的学习笔记、std库和core库的笔记
+
 《深入浅出Rust》还不错，适合在有知识背景下在地铁上翻翻快速阅读
 
 ## 一些笔记
@@ -452,6 +454,36 @@ tags: rust
    ```
 3. Rust的编译器中包含一个名为`borrow checker`的检测系统，该系统通过检查每个变量的生命周期，来检查所有引用的合法性。
 
+#### Traits
+1. traits的目的主要告诉编译器，一种类型拥有并能够和其他的数据类型共享数据，这种共享的过程可以通过traits来进行抽象化定义。和Java中的Interface有些类似。
+2. traits支持重载。
+3. traits本身也可以作为变量类型放在函数定义当中，这样做的时候说明该函数接受所有impl了该traits的类型的参数
+4. 对于有多个参数需要使用traits通用定义变量类型时，可以使用如下的简写形式：
+   ```rust
+   pub fn notify(item1: &impl Summary, item2: &impl Summary) {
+   ```
+   ```rust
+   pub fn notify<T: Summary>(item1: &T, item2: &T) {
+   ```
+   类似的，如果还是不同的traits：
+   ```rust
+   pub fn notify(item: &(impl Summary + Display)) {
+   ```
+   ```rust
+   pub fn notify<T: Summary + Display>(item: &T) {
+   ```
+   甚至更复杂地，通过`where`关键字，有：
+   ```rust
+   fn some_function<T: Display + Clone, U: Clone + Debug>(t: &T, u: &U) -> i32 {
+   ```
+   ```rust
+   fn some_function<T, U>(t: &T, u: &U) -> i32
+      where T: Display + Clone,
+            U: Clone + Debug
+   {
+   ```
+5. 类似的，返回值也可以为traits所限定的返回类型
+
 #### Lifetime Annotation Syntax
 
 为了进一步明确引用的生命周期，**生命周期标注（Lifetime Annotation Syntax）**被提出，首先看如下的代码：
@@ -579,11 +611,76 @@ let s: & 'static str = "Hello world!";
    opt-level = 3
    ```
 2. 通过在成员前使用`\\\`来写针对其的文档，可以使用markdown语法，将生成HTML格式的文档并使用`cargo doc`来生成，添加`--open`参数来查看文档，类似的还有`\\!`
-3. 关于如何将项目发布到crates.io暂时没看
+3. *关于如何将项目发布到crates.io暂时没看*
 
 ### 智能指针
+1. 在Rust中，引用实际上也是一种指针，但除了引用数据之外没有其他功能；智能指针是一种除了能像指针一样引用数据之外，还能有其他元数据和功能的一种数据结构的统称。和引用只是“借用”数据不同，智能指针实际上拥有其指向数据的所有权。
+2. 实际上`String`、`Vec<T>`这些也是智能指针的一种，因为他们拥有一部分内存空间并允许你通过他们来控制这些内存空间上的数据，同时他们还有一些其他的数据（如长度、encoding格式等）来保证其数据特性。
+3. 智能指针大部分情况下使用`struct`来实现，但和普通struct不同的是，智能指针必须单独实现`Deref`和`Drop`两种方法：
+   - Deref：一种模版方法，允许该智能指针结构体能够通过引用或智能指针本身来实现像引用一样的数据访问功能。对于没有定义该方法的智能指针，不能使用`*`来访问其数据，对于定义了该方法的智能指针，`*p`实际等价于`*(p.deref())`，如下面的代码：
+   ```rust
+   use std::ops::Deref;
+   // 为智能指针MyBox定义Deref方法
+   impl<T> Deref for MyBox<T> {
+      type Target = T;
+
+      fn deref(&self) -> &T {
+         &self.0
+      }
+   }
+   // 定义智能指针MyBox
+   struct MyBox<T>(T);
+   impl<T> MyBox<T> {
+      fn new(x: T) -> MyBox<T> {
+         MyBox(x)
+      }
+   }
+   fn hello(name: &str) {
+      println!("Hello, {}!", name);
+   }
+   fn main() {
+      let m = MyBox::new(String::from("Rust"));
+      hello(&m);
+   }
+   ```
+   上面的代码是可以正常编译并运行的，m在这里是一个`MyBox<String>`类型，调用`hello(&m)`时，首先将变成`hello(&(m.deref()))`，m.deref将`MyBox<String>`变成`String`类型。同时，`String`本身也是一个智能指针，因此其deref方法提供了将String类型数据转变为内含的字符串切片类型数据的能力，因此`&String`类型最终得以转为`&str`成为符合`fn hello`调用的参数类型。
+   - Drop：一种模版方法，当对应的智能指针变量不再使用时调用（相当于析构），Drop方法不能显式调用。可以通过std库中的Drop方法来提前清理释放inscope的变量内存。定义Drop方法类似Deref
+4. 许多库会使用其自定义的智能指针，在这里主要介绍标准库中最常见的三种智能指针：
+   - `Box<T>`：用来在堆上分配数据，实际上最终是用仅包含一个元素的`tuple struct`来实现的
+   - `Rc<T>`：一种通过引用计数来实现同一个数据有多个拥有着的智能指针，如创建链表时，指向下一个节点的指针需要为`Rc`而非`Box`
+   - `Ref<T>`以及`RefMut<T>`：需要通过`RefCell<T>`来访问，一种在运行时而非编译时应用借用策略的智能指针
+5. `interior mutability`：一种immutable类型，但通过其的一些API可以修改其内部的一些值
+6. 使用`Box::new(value)`来为特定的值分配堆上空间
+7. 使用`Rc::new(value)`来为特定的值分配计数智能指针，通过`Rc::clone(&rccounter)`来创建新指针并增加访问计数，通过`Rc::strong_count(&rccounter)`来获取访问计数的数字
+8. 关于`deref`的mut继承问题，Rust进行了如下限定：
+   - From `&T` to `&U` when `T: Deref<Target=U>`
+   - From `&mut T` to `&mut U` when `T: DerefMut<Target=U>`
+   - From `&mut T` to `&U` when `T: Deref<Target=U>`
+   which means未定义defrefmut方法时，得到的数据都是immutable的
+9. *有关`Ref`/`RefMut`的内容暂时没看*，相当于是把借用策略交给编程者来管理
+10. *有关Reference Cycle的内容暂时没看*，大致是说当使用`Rc<T>`等智能指针当形成循环依赖时，可能造成的内存破坏问题
 
 ### 并发控制
+1. 并发分为两类：*Concurrent programming*指程序的各部分独立运行；*parallel programming*则是指程序的各部分能同时运行。有关这两者的问题通常统称为并发(Concurrency)问题。
+2. 随着Rust的发展，开发人员发现其设计中的*ownership*和*type systems*是安全管理内存和并发控制的关键所在，这一特性也被称为Rust的*fearless concurrency*
+3. 使用`thread::spawn(func)`来创建线程，调用返回值的`.join().unwrap()`方法来等待子线程完成任务
+4. 如果子线程需要使用主线程中的变量，由于Rust无法知道新生成的线程会运行多久，因此其无法判断其借用的值是否会一直有效（比如变量可能会drop掉，或者因为在主线程中out of scope而回收掉，等等原因），从而导致编译检查失败。为了解决这个问题，在`spawn(func)`前添加move关键字（`spawn(move func)`）来告诉Rust：对于在func中使用到的所有变量，子线程获得其所有权（也就是主线程、其他子线程都不再拥有其所有权）
+5. 更通用的线程间通信手段是使用channel来完成，一种常用的channel为*mpsc(multiple producer single customer)*，一种FIFO队列通信原语
+   1. mpsc不随sender的结束而关闭。子线程中被发送的数据将被转移所有权（即在子线程之后的代码中不能再被使用）
+   2. 对recv()得到的数据类型通过send处的数据传入类型自动推断，async channel的buffer size无限大
+   3. 如果只发送一个数据，接收端可以调用`recv()`方法来获取数据；如果通过多次调用`send()`发送了多个数据，可以将rx当作iterator来遍历channel中接收到的所有数据（而非去调用`rx.recv()`来获取
+   4. 当有多个producer时，不能使用同一个`tx`，应调用`tx.clone()`后传给其他的producer
+6. 另一种常用的多线程通信的方式是使用共享内存，虽然在Go的设计哲学中有*“do not communicate by sharing memory.”*，但借助*ownership*和*type systems*的帮助，在Rust中还是提供了互斥锁（mutex，mutual exclusion）来对其进行管理，并且能帮助多个线程对共享内存进行正确地操作
+   1. 由于Mutex常需要在多个线程中使用，而`Mutex<T>`本身并没有实现Copy方法，导致不能通过move关键字或clone等方式来解决所有权的问题。一种想法是使用上一节中提到的`Rc<T>`来包裹使用，但由于move关键字中包含的Send()方法不能针对`Rc<T>`类型使用，因此这种方案行不通。基于这样的想法，可以使用原子操作的Rc，即`Arc<T>`类型来完成此问题
+   2. **Similarities Between `RefCell<T>/Rc<T>` and `Mutex<T>/Arc<T>`** ：与`Rc<T>`循环引用可能造成内存泄漏相比，`Mutex<T>`在实际运行时可能会造成死锁，可尝试通过标准库中的`MutexGuard`、以及一些各个语言中通用的解决手段来解决死锁问题。
+7. 实际上，Rust语言中并没有特别多的并发特性，上述的绝大多数都是来自于标准库的实现（而非语言自身特性）。然而，Rust真正的并发特性来自于`std::marker`中的`Sync`和`Send`特性：
+   - Send特性：允许不同线程之间对数据所有权的交接。几乎所有的类型都支持Send特性，但之前所述的`Rc<T>`（因为不同线程对计数器的修改如果不是原子操作，则可能会引入问题），以及裸指针，等类型不行。
+   - Sync特性：允许来自不同线程对数据的访问操作。换句话说：
+      > any type `T` is `Sync` if `&T` (an immutable reference to `T`) is `Send`
+
+### 继承
+1. Rust从设计上而言，并不是一个强调通过继承来实现代码复用的语言
+2. 
 
 ### 其他一些高级用法
 
@@ -601,7 +698,9 @@ unsafe提供的superpower包括：
 
 which means unsafe并不会关掉包括引用检查在内的一些其他检查
 
-#### traits, types, functions, closures和macros
+#### Advanced traits, types, functions, closures和macros
+
+
 
 
 ### 其他一些有意思的地方
@@ -614,3 +713,4 @@ which means unsafe并不会关掉包括引用检查在内的一些其他检查
 
    > This is analogous to how Bjarne Stroustrup, the original designer and implementor of C++, defines zero-overhead in “Foundations of C++” (2012): In general, C++ implementations obey the zero-overhead principle: What you don’t use, you don’t pay for. And further: What you do use, you couldn’t hand code any better.
 4. Rust使用libloading动态加载动态链接库：<https://docs.rs/libloading/latest/libloading/>，并使用`extern "C"`来使用C的方式来调用外部函数，调用的代码通常需要使用`unsafe`来包裹
+5. 链表的创建：参见`use crate::List::{Cons, Nil};`的相关内容
