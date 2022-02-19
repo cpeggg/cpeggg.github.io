@@ -82,6 +82,7 @@ tags: rust
 5. 数组的index为usize类型
 6. rust支持通过类似`(1..6)`这样的方式构建`std::ops::Range<Integer>`类型，但这和通过`[1, 2, 3, 4, 5]`构建出来的`[{integer}; 5]`类型有区别
 7. 通过`String::from/new`这样构造出来的变量类型为`alloc::string::String`；通过`="xxx"`这样构造出来的为`&str`，也可以使用`=b"xxxx"`来构造`&[u8]`类型的变量
+8. Rust支持使用`as`关键字来进行有限的类型转换
 
 #### 函数、代码块
 
@@ -214,7 +215,8 @@ tags: rust
    }
    ```
 5. impl来为struct定义方法，传入参数需要为`&self`，impl实现的方法可以与成员变量同名，上述实现的方法称为`Associated Functions`，impl中可以定义多个相关函数，也可以在不同的impl但针对同一struct的代码块中分别定义
-6. 不使用`&self`作为传入参数的`Associated Functions`不能称为struct的方法，因此不能用`.`来访问和调用，只能通过`::`来访问和调用，如：
+6. 当传入的参数为`&mut self`而非`&self`时，定义的函数称为类的静态成员函数（`&self`则对应为类的成员函数）
+7. 不使用`&self`作为传入参数的`Associated Functions`不能称为struct的方法，因此不能用`.`来访问和调用，只能通过`::`来访问和调用，如：
    ```rust
    impl Rectangle {
       fn square(size: u32) -> Rectangle {
@@ -290,10 +292,9 @@ tags: rust
    }
    ```
 5. 通过`self`和`super`进行2.中树上的相对路径module访问
-6. rust支持和python中类似的`as`关键字
-7. `use`同样支持被再次`pub`来再暴露给其他module使用
-8. 对于外部的crates，通过在`Cargo.toml`声明后cargo会在编译前期自动下载相关依赖
-9. `use`支持同路径下的合并：
+6. `use`同样支持被再次`pub`来再暴露给其他module使用
+7. 对于外部的crates，通过在`Cargo.toml`声明后cargo会在编译前期自动下载相关依赖
+8. `use`支持同路径下的合并：
    ```rust
    use std::cmp::Ordering;
    use std::io;
@@ -305,8 +306,8 @@ tags: rust
    // equals to
    use std::io::{self, Write};
    ```
-10. `use`中的`*`则是指：将对应module下的所有public对象导入
-11. 为了将不同的module能够分散到不同的文件当中去，需要按2.中的树形建立对应的文件夹以及相应的`module.rs`文件，在上层文件中还需要单独写一行`mod xxx_module;`来告诉编译器在另一个同名的`.rs`文件中去加载module的内容
+9.  `use`中的`*`则是指：将对应module下的所有public对象导入
+10. 为了将不同的module能够分散到不同的文件当中去，需要按2.中的树形建立对应的文件夹以及相应的`module.rs`文件，在上层文件中还需要单独写一行`mod xxx_module;`来告诉编译器在另一个同名的`.rs`文件中去加载module的内容
 
 ### 一些常用数据类型（类比c++中的stl）
 
@@ -455,7 +456,7 @@ tags: rust
 3. Rust的编译器中包含一个名为`borrow checker`的检测系统，该系统通过检查每个变量的生命周期，来检查所有引用的合法性。
 
 #### Traits
-1. traits的目的主要告诉编译器，一种类型拥有并能够和其他的数据类型共享数据，这种共享的过程可以通过traits来进行抽象化定义。和Java中的Interface有些类似。
+1. traits的目的主要告诉编译器，一种类型拥有并能够和其他的数据类型共享数据，这种共享的过程可以通过traits来进行抽象化定义。和Java中的Interface有些类似。Rust中trait是非常重要的概念，它承担了类似C++中通过纯虚类表达接口的意图。Rust中强调组合优先继承的思想，不支持struct级的继承，但支持trait的接口继承，这和Java等编程语言一样。
 2. traits支持重载。
 3. traits本身也可以作为变量类型放在函数定义当中，这样做的时候说明该函数接受所有impl了该traits的类型的参数
 4. 对于有多个参数需要使用traits通用定义变量类型时，可以使用如下的简写形式：
@@ -678,9 +679,37 @@ let s: & 'static str = "Hello world!";
    - Sync特性：允许来自不同线程对数据的访问操作。换句话说：
       > any type `T` is `Sync` if `&T` (an immutable reference to `T`) is `Send`
 
-### 继承
-1. Rust从设计上而言，并不是一个强调通过继承来实现代码复用的语言
-2. 
+### 面向对象编程
+1. Rust本身的一些特性其实不是面向对象的设计，但通过Rust这门语言可以完成面向对象的功能。
+2. Rust和一些面向对象编程的性质间的关系如下：
+   1. 可以通过pub/无pub来实现public/private控制，完成封装，即将实现细节不暴露给使用者
+   2. Rust从设计上而言，并不是一个强调通过继承来实现代码复用的语言。但出于使用继承的目的，Rust有对应的解决方式：
+      1. 如果是出于对父类的代码复用（即继承）的目的，那么可以通过Rust的traits机制来实现类似的效果，如：
+         ```rust
+         // 通过traits定义类似Java中的interface接口
+         pub trait Summary {
+            fn summarize_author(&self) -> String;
+            fn summarize(&self) -> String {
+               format!("(Read more from {}...)", self.summarize_author())
+            }
+         }
+         pub struct Tweet {
+            pub username: String,
+            pub content: String,
+            pub reply: bool,
+            pub retweet: bool,
+         }
+         impl Summary for Tweet {
+            fn summarize_author(&self) -> String {
+               format!("@{}", self.username)
+            }
+         }
+         ```
+         上述代码中，任意impl了Summary的类型就都有了默认的`summarize_author`和`summarize`方法。而且被impl的类型还可以重载此方法。
+      2. 如果是出于多态的目的，Rust其实也可以用`dyn traits`来实现。对普遍多态的反对意见主要包括：
+         1. 子类随着多态往往可能包含太多定义在基类，但子类完全不需要用到的方法
+         2. 上述的基类方法应用在子类时可能会造成问题
+3. *`dyn traits`部分暂时没看，<https://zhuanlan.zhihu.com/p/109990547>中也有相关介绍*
 
 ### 其他一些高级用法
 
@@ -699,9 +728,6 @@ unsafe提供的superpower包括：
 which means unsafe并不会关掉包括引用检查在内的一些其他检查
 
 #### Advanced traits, types, functions, closures和macros
-
-
-
 
 ### 其他一些有意思的地方
 1. Rust在接受命令行参数的时候，通常使用`std::env::args`来处理，但如果此时给出的命令行参数中包含非法的unicode字符，使用`::args`会造成程序panic，更稳妥的方式是使用`::args_os`来进行处理，但这也通常可能导致在不同OS上出现不同表示的情况，处理起来也更麻烦
