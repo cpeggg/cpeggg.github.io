@@ -22,6 +22,8 @@ tags: rust
 
 <https://skyao.io/learning-rust/std.html>有自己的学习笔记、std库和core库的笔记
 
+<https://github.com/sunface/rust-course> 一个开源的中文书目
+
 《深入浅出Rust》还不错，适合在有知识背景下在地铁上翻翻快速阅读
 
 ## 一些笔记
