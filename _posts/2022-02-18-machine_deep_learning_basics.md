@@ -227,22 +227,86 @@ model = RandomForestRegressor(max_depth=..., n_estimators=..., random_state=0)
 
 ### 支持向量机SVM
 
-了解SVM，首先要了解什么是支持向量，
+了解SVM，首先要了解什么是支持向量。
 
-SVC是用来进行分类的一种SVM：
+首先一个概念则是线性可分：在二维空间上，两类点被一条直线完全分开被称为线性可分。将其扩展到多维空间，则能将其正确划分、且该超平面距离两个类别的最近的样本的距离最远的超平面$\omega^Tx+b=0$（矩阵形式）称为最佳超平面，即有：
+1. 两类样本分别分割在该超平面的两侧；
+2. 两侧距离超平面最近的样本点到超平面的距离最大。
+
+<div align=center>
+<img width=600 src="https://pic4.zhimg.com/v2-0f1ccaf844905148b7e75cab0d0ee2e3_r.jpg"/>
+</div>
+
+而支持向量，则是样本中距离超平面最近的若干个点。
+
+SVM的最优化向量问题即找到如上所述的最大间隔超平面。任意的超平面都可以用如下的线性方程来描述：
+
+$$\omega^Tx+b=0$$
+
+那么对二维空间，点$(x,y)$到直线$Ax+By+C=0$的距离公式是：
+
+$$\frac{|Ax+By+C|}{\sqrt{A^2+B^2}}$$
+
+根据支持向量的定义我们知道，支持向量到超平面的距离为$d$，其他点到超平面的距离大于$d$。
+
+对于SVM的实际求解流程中要应用到拉格朗日函数的构造、强对偶性的转化、序列最小优化算法求解（Sequential Minimal Optimization，SMO）等流程，具体可见这个[知乎专栏](https://zhuanlan.zhihu.com/p/77750026)
+
+#### 两类线性不可分问题
+首先是非线性可分的问题：如果不存在这样的超平面可以将两类点刚好完全分开怎么办？
+
+一种方式，如果可以通过给定一定的松弛程度（松弛变量$\xi_i, \xi_j$），可以得到软间隔
+
+<div align=center>
+<img width=300 src="https://pic1.zhimg.com/v2-8e3d96fd9f9cad298628c7e2c4c8a8b8_r.jpg"/>
+</div>
+
+另一种方式，完全的线性不可分：
+
+<div align=center>
+<img width=450 src="https://pic1.zhimg.com/v2-a17603302d58b3747118084aa25fe758_r.jpg"/>
+</div>
+
+这种情况的解决方法就是：将二维线性不可分样本映射到高维空间中，让样本点在高维空间线性可分
+
+<div align=center>
+<img width=300 src="https://pic1.zhimg.com/v2-9758d49e634c15a3e684ab84bad913ec_r.jpg"/>
+</div>
+
+通常选用的映射方式需要满足：$x_i$与$x_j$在特征空间的内积等于它们在原始样本空间中通过函数$k(x,y)$计算的结果这一条件，这样可以减少计算量降低存储使用。
+
+满足这种条件的映射函数则称为**核函数**，常用的有：
+- 线性核函数$k(x_i, x_j)=x_i^Tx_j$
+- 多项式核函数$k(x_i, x_j)=(x_i^Tx_j)^d$
+- 高斯核函数$k(x_i, x_j)=exp(-\frac{\|x_i-x_j\|}{2\delta^2})$
+
+SVM相关的几个术语：
+- SVM：Support Vector Machine，支持向量
+- SVC：Support Vector Classification，使用支持向量进行分类
+- SVR：Support Vector Regression，使用支持向量进行回归分析
+
+使用python-sklearn中的SVC来用SVM进行分类：
 ```python
 from sklearn.svm import SVC
 model = SVC(c=..., random_state=0)
 ```
+除上述的以外，还有：
+- `svm.LinearSVC` Linear Support Vector Classification.
+- `svm.LinearSVR` Linear Support Vector Regression.
+- `svm.NuSVC` Nu-Support Vector Classification.
+- `svm.NuSVR` Nu Support Vector Regression.
+- `svm.OneClassSVM` Unsupervised Outlier Detection.
+- `svm.SVC` C-Support Vector Classification.（上述代码中使用的）
+- `svm.SVR` Epsilon-Support Vector Regression.
 
 ### 小结
-上述的方法可以用来分类（如预测股票会涨还是会跌），也可以用来预测具体数值（如具体的涨跌幅度）
+上述的方法可以用来分类（如预测股票会涨还是会跌），也可以用来预测具体数值（如具体的涨跌幅度），取决于你用它是做分类classification还是回归regression分析
 
 ## Deep Learning
 
 深度学习（deep learning）是机器学习的分支，是一种以人工神经网络为架构，对数据进行表征学习的算法。其基本架构为人工神经网络，
 
 ### 多层感知器MLP以及前向全联接网络
+
 
 ### 循环神经网络RNN
 
