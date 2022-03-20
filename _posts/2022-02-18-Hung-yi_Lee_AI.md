@@ -71,3 +71,37 @@ Hung-yi Lee的AI课（2021version）笔记
 13. 过于复杂的结构（如选取过多特征、或者网络层数越大）可能导致在训练集上效果更好，但测试集上反而效果变差的情况，这种情况便称为**overfitting过拟合**
 
 ## Roadmap of Improving Model
+
+1. 总体roadmap如下图所示：
+   <div align=center>
+   <img width=500 src="/assets/images/mdimages/machinelearning6.png"/>
+   </div>
+2. 如何判断在训练集上loss过大的原因到底是model能力不足（无法得到很好的结果），还是梯度下降没有得到更好的点（可能有更好的结果，但却没有去找到它）呢？课程中给出的方法分为如下几步：
+   1. 首先从更简单的模型开始训练起，如使用更少的层数、更少的特征、甚至是非深度学习的其他机器学习方法等等
+   2. 而如果与之相对的，当我们基于上一步的方法做更多层数的模型训练时，如果我们不能得到更好的training loss时，我们则认为是优化方面的问题（因为更多层数的模型一定能包含浅层数模型的能力）
+3. 但也不是说对于一个模型，更大的深度就一定更好，更大的深度代表模型的弹性越大，在同样的训练集上训练出来的函数在非训练集上的表现就可能越复杂，从而有更大可能产生过拟合的现象，即模型在training data上表现良好，但在测试集上表现一般甚至很差的现象。如何解决过拟合的问题
+   1. 增加训练资料
+      1. 最好是直接增加实际的训练资料
+      2. Data augmentation：在原有的训练集上，根据自己的理解，创造新的训练资料（比如对于图像识别，将原来的图像放大缩小、反转、切取部分等等，但一般不会把图片上下颠倒，因为日常图像识别中也不会出现上下颠倒的照片，这样处理反而可能会造成学习不希望学习的东西）
+   2. 缩小模型的弹性：
+      1. Less paremeters、sharing parameters，如fully-connect网络中的CNN，就是针对图像识别做了一些限制，使得其弹性没有普通全连接网络的弹性那么高，但是在图像识别上表现更好
+      2. Less features
+      3. Early stopping
+      4. Regulation
+      5. Dropout
+4. 从上述流程中也可以看到，overfitting和model bias之间实际存在着一个trade-off的问题
+<div align=center>
+<img width=500 src="/assets/images/mdimages/machinelearning7.png"/>
+</div>
+一种朴素的想法是，在测试集的公开部分(public testing set)上对多个训练的模型进行比较，选择其中mse最小的模型，再拿去在测试集的真正拿来测试的部分(private testing set)上验证，往往导致如下的情况出现：
+<div align=center>
+<img width=300 src="/assets/images/mdimages/machinelearning8.png"/>
+</div>
+因此，真正好的训练流程是，在原来的训练集(training set)上将数据分为training set和validation set 两部分，从而让原来的public testing set有了private testing set的效果，这样训练出来的模型就能在private testing set上表现更好。
+
+而关于如何将training set进行train和val的切分，N-fold Cross Validation的方法被提出，其将数据集等分为若干份（如等分为3份）然后交叉来作为训练集和验证集，每个模型都对每一种交叉后的数据集进行训练和验证，得到在每种验证集上的mse后取平均，来得到最终表现最好的模型。如图所示：
+<div align=center>
+<img width=300 src="/assets/images/mdimages/machinelearning9.png"/>
+</div>
+
+5. 当然，除了上述的overfitting，导致在测试集上表现不佳的原因还有就是实际数据和测试数据的分布不同的问题（mismatch），这种就很难通过改进模型来解决
