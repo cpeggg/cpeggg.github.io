@@ -446,9 +446,18 @@ refer to [blog](https://ziyubiti.github.io/2016/11/06/gradvanish/) for more info
 
 GRU算法是针对LSTM做的进一步改进，其将遗忘门和输入门合并成一个单一的更新门，同时合并了数据的单元状态和隐藏状态，使得模型结构相比于LSTM而言更加简单。
 
+### 其他一些未提到但重要的术语：
+1. batch：梯度下降中，每次的参数更新有两种方式：
+   1. 遍历所有的数据集去算loss function，再去算函数对各个参数的梯度，再更新梯度。这样要求每次都重新把数据集里的所有数据都跑一遍，对内存和计算量要求较大，这种方式称为batch gradient descent，批梯度下降
+   2. 每看一个数据就算一次loss function，并求梯度且更新参数，这种方式称为随机梯度下降stochastic gradient descent，这种方法更新速度快但收敛不太好，还容易造成在最优点附近震荡
+   因此，为了综合以上两种方式，mini-batch gradient descent被提出，将数据集先进行分批后采用随机梯度下降，这个分批的大小便是当今训练中常见的batch_size参数
+2. iteration：一次iteration等于使用batch_size个数据进行一次训练，也就是每一次iteration都是对参数的一次更新，在iteration中包含了损失函数的计算和BP算法更新参数这两个过程。也就是有：$data\\_size = batch\\_zize * iteration\\_time$
+3. epochs：周期，指向前和向后传播中，所有批次的单次训练迭代。也就是一个周期内，所有的数据将被过一遍
+4. sequence length：在LSTM中可能还会遇到一个seq\_length的参数，有：$batch\\_size = num\\_steps * seq\\_length$
+
 ## 工具安装
-- TensorFlow：分为CPU版本（直接安装`pip install tensorflow`）和使用GPU的版本（流程参考[这篇文章](https://zhuanlan.zhihu.com/p/84782861)）
-- Keras：直接`pip install keras`即可，需要修改其配置文件来让其使用tensorflow作为后端
+- TensorFlow：tensorflow本身是一个使用数据流图进行数值计算的开源软件代码库，数据流图中的节点代表数学运算，而图中的边则为在这些节点间传递的张量（即tensor），而这一特性能够很好的用在机器学习和深度学习网络的研究当中。其分为CPU版本（直接安装`pip install tensorflow`）和使用GPU的版本（流程参考[这篇文章](https://zhuanlan.zhihu.com/p/84782861)）。除了python的接口外，tensorflow还有C++和Java的版本。
+- Keras：是一个用python编写的一组更高层面的神经网络接口。直接`pip install keras`即可，需要修改其配置文件来让其使用tensorflow作为后端
 
 ## 其他链接
 
