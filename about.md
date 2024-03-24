@@ -30,6 +30,6 @@ Hi!
 
 This is Quanpu Cai(蔡洤朴). 
 
-Basically, I received my B.S. and M.S. degrees in Computer Security from Shanghai Jiao Tong University, Shanghai, China<img src="/assets/images/logo/SJTU.png" width = "20" height = "20" /> . I'm heading to Alibaba Cloud Security <img src="/assets/images/logo/aliyun.svg" width = "20" height = "20" />  to conduct security application development for virtualized cloud instances and related work for data privacy and protection.
+Basically, I received my B.S. and M.S. degrees in Computer Security from Shanghai Jiao Tong University, Shanghai, China<img src="/assets/images/logo/SJTU.png" width = "20" height = "20" /> . Currently I am at Alibaba Cloud Security <img src="/assets/images/logo/aliyun.svg" width = "20" height = "20" />  conducting security application development for virtualized cloud instances and related work for data privacy and protection.
 
 My publications are listed below  <img src="/assets/images/logo/glScholar.svg" width = "20" height = "20" /> 
