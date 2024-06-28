@@ -28,8 +28,10 @@ key: page-about
 
 Hi!
 
-This is Quanpu Cai(蔡洤朴). 
+This is Quanpu Cai (蔡洤朴).
 
-Basically, I received my B.S. and M.S. degrees in Computer Security from Shanghai Jiao Tong University, Shanghai, China<img src="/assets/images/logo/SJTU.png" width = "20" height = "20" /> . Currently I am at Alibaba Cloud Security <img src="/assets/images/logo/aliyun.svg" width = "20" height = "20" />  conducting security application development for virtualized cloud instances and related work for data privacy and protection.
+I received my B.S. and M.S. degrees in Computer Security from [Shanghai Jiao Tong University](https://www.topuniversities.com/world-university-rankings?tab=indicators&search=Shanghai%20Jiao%20Tong%20University&sort_by=rank&order_by=asc), Shanghai, China <img src="/assets/images/logo/SJTU.png" width="20" height="20" />. During my time there, I joined the CTF Team 0ops <img src="https://ctftime.org/media/cache/21/d9/21d9ae96ad053537559a95079c5d24be.png" width="20" height="20" /> and enjoyed my role as a pwn player.
 
-My publications are listed below  <img src="/assets/images/logo/glScholar.svg" width = "20" height = "20" /> 
+In 2022, I joined [Alibaba Cloud](https://www.aliyun.com/) Security <img src="/assets/images/logo/aliyun.svg" width="20" height="20" /> as a senior security engineer. My responsibilities included developing trusted computing and zero-trust infrastructure products, enhancing security for virtualization, designing agentless security scanning products, and managing the security development lifecycle (SDL) for Aliyun Elastic Computing Service (ECS) and Alibaba Tongyi AI products. I left this position and headed to Austin, TX in June 2024.
+
+My publications are listed below <img src="/assets/images/logo/glScholar.svg" width="20" height="20" />, and my patent list can be found [here](https://patents.google.com/?inventor=%E8%94%A1%E6%B4%A4%E6%9C%B4).
